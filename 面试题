@@ -1,0 +1,38 @@
+-----------------------------------------------------------------
+我的面试题之一(面试官原话):
+问：你的项目是用log4j2做日志收集,那么日志每时都会产生那么你们是怎么不让内存溢出?除了扩充磁盘
+答：压缩日志文件,用shell命令脚本!
+!!!!!!!!
+步骤如下:
+1.可以放在任意目录，但放在/data/logs目录下更方便
+2.放到目录之后，chmod 755 zip-delete-log.sh
+3.检查有没有zip和unzip命令，没有则安装：yum install zip unzip
+4.创建linux定时任务crontab：
+    查看定时任务：crontab -l
+    创建定时任务：crontab -e
+        # crontab 每天2点定时删除指定日期和压缩指定日期的数据
+        0 2 * * * sh /data/logs/zip-delete-log.sh >> /dev/null 2>&1
+
+5.重载定时配置：service crond reload  或 重启定时服务：service crond restart
+
+下面是脚本文件内容:
+#!/bin/bash
+# filename:delete-log.sh
+# crontab 每天2点定时删除指定日期的日志，压缩指定日期的日志
+# crontab: 0 2 * * * sh /data/logs/zip-delete-log.sh >> /dev/null 2>&1
+# 如今天是2020-09-11，删除10天前数据，就是删除2020-09-01的数据
+# 压缩3天前数据，就是删除2020-09-08的数据
+ 
+ 
+#1.delete log
+deleteday=`date -d '-10 day' +%Y-%m-%d`;
+cd /data/logs/
+rm -rf *${deleteday}*
+echo "rm -rf *${deleteday}*"
+ 
+#2.zip log
+yesterday=`date -d '-3 day' +%Y-%m-%d`;
+for file in $(ls *${yesterday}*)
+do
+ zip -rym ${file}.zip ${file}
+ echo "zip -rym ${file}.zip ${file}"
